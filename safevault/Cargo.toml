@@ -1,0 +1,30 @@
+[package]
+name = "safevault"
+version = "0.1.0"
+edition = "2021"
+description = "SafeVault FS Phase 1: journaling filesystem foundation"
+license = "MIT"
+
+[features]
+default = []
+fuse = ["dep:fuser"]
+
+[dependencies]
+anyhow = "1"
+axum = "0.7"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4", features = ["derive"] }
+dotenvy = "0.15"
+jwalk = "0.8"
+notify = "8"
+rayon = "1"
+reqwest = { version = "0.12", features = ["blocking", "json", "rustls-tls"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "net", "rt-multi-thread"] }
+tower-http = { version = "0.6", features = ["cors"] }
+walkdir = "2"
+
+[target.'cfg(unix)'.dependencies]
+fuser = { version = "0.14", optional = true }
