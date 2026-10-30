@@ -44,7 +44,9 @@ import {
   CornerDownRight,
   Columns,
   Undo2,
-  Redo2
+  Redo2,
+  LayoutGrid,
+  List
 } from "lucide-react";
 import {
   api,
@@ -190,6 +192,7 @@ export function App() {
   const [fileFilter, setFileFilter] = useState<"all" | "dirs" | "docs" | "code">("all");
   const [sortField, setSortField] = useState<"name" | "size" | "modified">("name");
   const [sortAsc, setSortAsc] = useState<boolean>(true);
+  const [viewMode, setViewMode] = useState<"icons" | "list">("icons");
 
   // Inspector Panel state
   const [inspectedItem, setInspectedItem] = useState<FileItem | null>(null);
@@ -906,7 +909,7 @@ export function App() {
         <div className="sidebar-scroll">
           {/* System Drives */}
           <div>
-            <div className="nav-section-title">My Computer (Drives)</div>
+            <div className="nav-section-title">Locations</div>
             <div className="drives-list">
               {systemDrives.length > 0 ? (
                 systemDrives.map((d) => (
@@ -918,7 +921,7 @@ export function App() {
                       setActiveTab("files");
                     }}
                   >
-                    <HardDrive size={15} color="#1b4d3e" />
+                    <HardDrive size={15} color="#8e8e93" />
                     <div className="drive-meta">
                       <div className="drive-label">{d.label}</div>
                       <div className="drive-free">{formatBytes(d.free_bytes)} free of {formatBytes(d.total_bytes)}</div>
@@ -934,7 +937,7 @@ export function App() {
           {/* Managed Roots & Workspaces */}
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div className="nav-section-title">Managed Roots</div>
+              <div className="nav-section-title">Favorites</div>
               <button
                 className="btn btn-sm btn-icon"
                 title="Add Root Folder"
@@ -954,7 +957,7 @@ export function App() {
                     setActiveTab("files");
                   }}
                 >
-                  <Folder size={14} color="#b45309" />
+                  <Folder size={14} color="#2f8ff0" />
                   <div className="drive-meta">
                     <div className="drive-label">{r.name}</div>
                     <div className="drive-free" style={{ fontFamily: "var(--font-mono)" }}>{pathBasename(r.path)}</div>
@@ -973,7 +976,7 @@ export function App() {
 
           {/* Navigation Views */}
           <div>
-            <div className="nav-section-title">Workspaces & Lab</div>
+            <div className="nav-section-title">Workspaces</div>
             <nav style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <div
                 className={`nav-item ${activeTab === "files" ? "active" : ""}`}
@@ -1138,7 +1141,7 @@ export function App() {
           {/* Quick Actions Toolbar */}
           <div className="header-actions">
             {/* Content Undo / Redo */}
-            <div style={{ display: "inline-flex", gap: 3 }}>
+            <div className="seg-group compact" style={{ display: "inline-flex", gap: 3 }}>
               <button
                 className="btn btn-sm"
                 title={
@@ -1169,7 +1172,7 @@ export function App() {
             </div>
 
             {/* Name / Location Undo / Redo */}
-            <div style={{ display: "inline-flex", gap: 3 }}>
+            <div className="seg-group compact" style={{ display: "inline-flex", gap: 3 }}>
               <button
                 className="btn btn-sm"
                 title={
@@ -1315,9 +1318,136 @@ export function App() {
                     Source Code
                   </span>
                 </div>
+
+                <div className="view-toggle">
+                  <button
+                    className={viewMode === "icons" ? "active" : ""}
+                    title="Icon view"
+                    onClick={() => setViewMode("icons")}
+                  >
+                    <LayoutGrid size={14} />
+                  </button>
+                  <button
+                    className={viewMode === "list" ? "active" : ""}
+                    title="List view"
+                    onClick={() => setViewMode("list")}
+                  >
+                    <List size={14} />
+                  </button>
+                </div>
               </div>
 
               <div className="file-table-container">
+                {viewMode === "icons" ? (
+                  <div
+                    className="finder-grid"
+                    onClick={(e) => {
+                      if (e.target === e.currentTarget) setInspectedItem(null);
+                    }}
+                  >
+                    {loadingFiles ? (
+                      <div className="finder-empty">Loading files from C++ backend...</div>
+                    ) : filteredItems.length === 0 ? (
+                      <div className="finder-empty">
+                        Folder is empty. Create a file or click "Reset Demo Workspace" to begin.
+                      </div>
+                    ) : (
+                      filteredItems.map((item) => {
+                        const isSelected = selectedPaths.has(item.path);
+                        const isInspected = inspectedItem?.path === item.path;
+                        const ext = (item.extension || "").replace(".", "").toLowerCase();
+                        const kind = ["ts", "tsx", "js", "jsx", "py", "cpp", "c", "h", "hpp", "java", "go", "rs", "css", "html", "json", "yml", "yaml", "sh"].includes(ext)
+                          ? "code"
+                          : ["txt", "md", "doc", "docx", "pdf", "rtf"].includes(ext)
+                          ? "text"
+                          : ["csv", "xls", "xlsx", "db", "sql"].includes(ext)
+                          ? "data"
+                          : ["png", "jpg", "jpeg", "gif", "svg", "mp3", "mp4", "mov"].includes(ext)
+                          ? "media"
+                          : "";
+                        return (
+                          <div
+                            key={item.path}
+                            className={`finder-item ${isSelected || isInspected ? "selected" : ""}`}
+                            onClick={() => setInspectedItem(item)}
+                            onDoubleClick={() => {
+                              if (item.is_directory) {
+                                loadDirectory(item.path);
+                              } else {
+                                openInEditor(item.path);
+                              }
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              className="finder-check"
+                              checked={isSelected}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => {
+                                const next = new Set(selectedPaths);
+                                if (e.target.checked) next.add(item.path);
+                                else next.delete(item.path);
+                                setSelectedPaths(next);
+                              }}
+                            />
+                            <div className="finder-actions">
+                              {!item.is_directory && (
+                                <button
+                                  title="Open in Document Editor"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openInEditor(item.path);
+                                  }}
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+                              )}
+                              <button
+                                title="Rename (F2)"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openRenameModal(item);
+                                }}
+                              >
+                                <Edit3 size={12} />
+                              </button>
+                              <button
+                                title="View File History"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openFileHistory(item.path);
+                                }}
+                              >
+                                <History size={12} />
+                              </button>
+                              <button
+                                className="danger"
+                                title="Quarantine File"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openQuarantineModal([item]);
+                                }}
+                              >
+                                <Archive size={12} />
+                              </button>
+                            </div>
+                            <div className="finder-icon">
+                              {item.is_directory ? (
+                                <div className="mac-folder"><i /></div>
+                              ) : (
+                                <div className={`mac-doc ${kind}`}><b>{ext || "file"}</b></div>
+                              )}
+                            </div>
+                            <div className="finder-name" title={item.name}>{item.name}</div>
+                            <div className="finder-sub">
+                              {item.is_directory ? "Folder" : formatBytes(item.size_bytes)}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                ) : (
                 <table className="file-table">
                   <thead>
                     <tr>
@@ -1393,9 +1523,9 @@ export function App() {
                             <td>
                               <div className="file-name-cell">
                                 {item.is_directory ? (
-                                  <Folder size={16} color="#b45309" />
+                                  <Folder size={16} color="#2f8ff0" />
                                 ) : (
-                                  <FileText size={16} color="#1b4d3e" />
+                                  <FileText size={16} color="#8e8e93" />
                                 )}
                                 <span>{item.name}</span>
                               </div>
@@ -1461,6 +1591,7 @@ export function App() {
                     )}
                   </tbody>
                 </table>
+                )}
               </div>
 
               {/* ── Floating Batch Action Toolbar ── */}
@@ -1612,7 +1743,7 @@ export function App() {
             <div className="editor-view">
               <div className="editor-toolbar">
                 <div className="editor-file-title">
-                  <FileText size={16} color="#1b4d3e" />
+                  <FileText size={16} color="#007AFF" />
                   <span>{editorPath ? pathBasename(editorPath) : "No file loaded"}</span>
                   <span
                     className={`editor-status-pill ${
@@ -1683,7 +1814,7 @@ export function App() {
               <div className="card">
                 <div className="card-header">
                   <div className="card-title">
-                    <BarChart2 size={16} color="#1b4d3e" />
+                    <BarChart2 size={16} color="#007AFF" />
                     <span>Folder Analytics & Duplicate Detection</span>
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
@@ -1732,7 +1863,7 @@ export function App() {
               <div className="card">
                 <div className="card-header">
                   <div className="card-title">
-                    <CopyIcon size={16} color="#b45309" />
+                    <CopyIcon size={16} color="#2f8ff0" />
                     <span>Exact Duplicate Files (SHA-256 Byte Matches)</span>
                   </div>
                   {folderInsights && folderInsights.duplicates.length > 0 && (
@@ -1860,7 +1991,7 @@ export function App() {
               <div className="card">
                 <div className="card-header">
                   <div className="card-title">
-                    <Inbox size={16} color="#b45309" />
+                    <Inbox size={16} color="#2f8ff0" />
                     <span>External Changes Inbox (Conflict-Aware Candidate Triage)</span>
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
@@ -2031,7 +2162,7 @@ export function App() {
               <div className="card">
                 <div className="card-header">
                   <div className="card-title">
-                    <Activity size={16} color="#1b4d3e" />
+                    <Activity size={16} color="#007AFF" />
                     <span>Real-Time OS Event Monitor</span>
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
@@ -2374,7 +2505,7 @@ export function App() {
               <div className="card">
                 <div className="card-header">
                   <div className="card-title">
-                    <History size={16} color="#1b4d3e" />
+                    <History size={16} color="#007AFF" />
                     <span>Independent File Identity & Revision History</span>
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
@@ -2689,7 +2820,7 @@ export function App() {
               <div className="card">
                 <div className="card-header">
                   <div className="card-title">
-                    <Sliders size={16} color="#1b4d3e" />
+                    <Sliders size={16} color="#007AFF" />
                     <span>OS Performance Laboratory</span>
                   </div>
                   <a className="btn btn-sm" href={api.getBenchmarkCsvUrl()} download="fileguard_benchmarks.csv">
@@ -2954,7 +3085,7 @@ export function App() {
               <div className="card">
                 <div className="card-header">
                   <div className="card-title">
-                    <SettingsIcon size={16} color="#1b4d3e" />
+                    <SettingsIcon size={16} color="#007AFF" />
                     <span>System Settings & Storage Engine</span>
                   </div>
                 </div>

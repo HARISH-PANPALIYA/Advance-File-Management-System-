@@ -150,7 +150,7 @@ FileGuard is designed to run natively on **Windows 11/10** (via Win32 APIs, MinG
 
 - **Location:** [`run_all.ps1`](file:///d:/EventDrivenFileSystem/run_all.ps1), [`safevault_cpp/CMakeLists.txt`](file:///d:/EventDrivenFileSystem/safevault_cpp/CMakeLists.txt), and [`safevault_cpp/src/main.cpp`](file:///d:/EventDrivenFileSystem/safevault_cpp/src/main.cpp)
 - **Mechanisms:**
-  - `run_all.ps1`: Detects Windows 11 Smart App Control (SAC) or Code Integrity enforcement; if unsigned local native binaries are blocked, it automatically switches execution to WSL2 without requiring a reboot or registry tampering.
+  - `run_all.ps1`: Detects Windows 11 Smart App ghruControl (SAC) or Code Integrity enforcement; if unsigned local native binaries are blocked, it automatically switches execution to WSL2 without requiring a reboot or registry tampering.
   - Standardized C++20 `std::filesystem` used across both platforms for directory iterators, file permissions, file sizes, and renames.
 
 ---
